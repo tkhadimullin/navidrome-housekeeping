@@ -37,6 +37,3 @@ jobs:
             ${{ secrets.DOCKER_HUB_USERNAME }}/navidrome-housekeeping:${{ github.sha }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/navidrome-housekeeping:cache
           cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/navidrome-housekeeping:cache,mode=max
-
-      - name: Summary
-          run: echo "Image pushed to Docker Hub: ${{ secrets.DOCKER_HUB_USERNAME }}/navidrome-housekeeping:latest"
