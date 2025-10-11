@@ -34,6 +34,4 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKER_HUB_USERNAME }}/navidrome-housekeeping:latest
-            ${{ secrets.DOCKER_HUB_USERNAME }}/navidrome-housekeeping:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/navidrome-housekeeping:cache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/navidrome-housekeeping:cache,mode=max
+            ${{ secrets.DOCKER_HUB_USERNAME }}/navidrome-housekeeping:${{ github.sha }}          
