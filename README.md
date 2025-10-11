@@ -44,7 +44,7 @@ services:
       - /path/to/your/music:/music:ro
 
   navidrome-housekeeping:
-    image: your-dockerhub-username/navidrome-housekeeping:latest
+    image: wiseowls/navidrome-housekeeping:latest
     container_name: navidrome-housekeeping
     restart: unless-stopped
     environment:
