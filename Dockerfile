@@ -11,8 +11,8 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . .
 
-RUN groupadd -g 1000 appuser && \
-    useradd -m -u 1000 -g 1000 appuser
+RUN groupadd -g 101 appuser && \
+    useradd -m -u 100 -g 101 appuser
 USER appuser
 
 CMD ["python", "main.py"]
