@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: navidrome-unwanted-cleanup
+  IMAGE_NAME: navidrome-housekeeping
 
 jobs:
   build-and-push:
@@ -33,5 +33,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKER_HUB_USERNAME }}/navidrome-housekeeping:latest
-            ${{ secrets.DOCKER_HUB_USERNAME }}/navidrome-housekeeping:${{ github.sha }}          
+            ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}          
