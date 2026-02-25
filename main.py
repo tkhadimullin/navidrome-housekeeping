@@ -64,4 +64,7 @@ async def main():
         time.sleep(POLL_INTERVAL)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    finally:
+        asyncio.run(navidrome_client.close())

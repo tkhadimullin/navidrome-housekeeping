@@ -5,10 +5,10 @@ import time
 
 class NavidromeClient:
     """Simple client for interacting with Navidrome Subsonic API"""
-    
+
     # Re-authenticate this many seconds before actual expiry to avoid race conditions
     TOKEN_EXPIRY_BUFFER_SECONDS = 60
-    
+
     def __init__(self, NAVIDROME_URL, NAVIDROME_USERNAME, NAVIDROME_PASSWORD):
         self.base_url = NAVIDROME_URL
         self.username = NAVIDROME_USERNAME
@@ -17,7 +17,19 @@ class NavidromeClient:
         self._subsonic_token = None
         self._subsonic_salt = None
         self._token_expiry = None
+        self._session = None
     
+    async def _get_session(self):
+        """Get or create a shared aiohttp session"""
+        if self._session is None or self._session.closed:
+            self._session = aiohttp.ClientSession()
+        return self._session
+
+    async def close(self):
+        """Close the shared session"""
+        if self._session and not self._session.closed:
+            await self._session.close()
+
     def _clear_credentials(self):
         """Clear cached credentials to force re-authentication"""
         self._auth_token = None
@@ -50,27 +62,27 @@ class NavidromeClient:
             
         if self.username and self.password and not self._subsonic_token:
             try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                        f"{self.base_url}/auth/login",
-                        json={"username": self.username, "password": self.password},
-                    ) as response:
-                        response.raise_for_status()
-                        data = await response.json()
+                session = await self._get_session()
+                async with session.post(
+                    f"{self.base_url}/auth/login",
+                    json={"username": self.username, "password": self.password},
+                ) as response:
+                    response.raise_for_status()
+                    data = await response.json()
 
-                        # Store both JWT token and Subsonic credentials
-                        self._auth_token = data.get("token")
-                        self._subsonic_token = data.get("subsonicToken")
-                        self._subsonic_salt = data.get("subsonicSalt")
-                        
-                        # Parse and store token expiry for proactive refresh
-                        if self._auth_token:
-                            self._token_expiry = self._parse_jwt_expiry(self._auth_token)
-                            if self._token_expiry:
-                                print(f"Authenticated successfully. Token expires at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self._token_expiry))}")
+                    # Store both JWT token and Subsonic credentials
+                    self._auth_token = data.get("token")
+                    self._subsonic_token = data.get("subsonicToken")
+                    self._subsonic_salt = data.get("subsonicSalt")
 
-                        if not self._subsonic_token or not self._subsonic_salt:
-                            raise Exception("No Subsonic credentials received from login response")
+                    # Parse and store token expiry for proactive refresh
+                    if self._auth_token:
+                        self._token_expiry = self._parse_jwt_expiry(self._auth_token)
+                        if self._token_expiry:
+                            print(f"Authenticated successfully. Token expires at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self._token_expiry))}")
+
+                    if not self._subsonic_token or not self._subsonic_salt:
+                        raise Exception("No Subsonic credentials received from login response")
 
             except Exception as e:
                 raise Exception(f"Unexpected error during login: {e}")
@@ -81,7 +93,7 @@ class NavidromeClient:
             )
             
     def _get_subsonic_params(self):
-        """Get Subsonic API parameters"""
+        """Get Subsonic API query parameters"""
         return {
             "u": self.username,
             "t": self._subsonic_token,
@@ -89,6 +101,11 @@ class NavidromeClient:
             "v": "1.16.1",
             "c": "PlaylistHousekeeper",
             "f": "json",
+        }
+
+    def _get_auth_headers(self):
+        """Get authentication headers"""
+        return {
             "x-nd-authorization": f"Bearer {self._auth_token}"
         }
     
@@ -100,13 +117,32 @@ class NavidromeClient:
 
             url = f"{self.base_url}/{endpoint}"
             params = {**self._get_subsonic_params(), **kwargs}
-            headers = {**self._get_subsonic_params()}
+            headers = self._get_auth_headers()
 
-            async with aiohttp.ClientSession() as session:                
-                async with session.get(url, params=params, headers=headers) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data
+            session = await self._get_session()
+            async with session.get(url, params=params, headers=headers, allow_redirects=False) as response:
+                # Detect redirects (e.g. to /app/ login page) instead of silently following them
+                if 300 <= response.status < 400:
+                    location = response.headers.get("Location", "unknown")
+                    raise Exception(
+                        f"API returned redirect {response.status} to '{location}' — "
+                        f"this usually means authentication failed or the URL is incorrect. "
+                        f"Requested: {url}"
+                    )
+
+                response.raise_for_status()
+
+                # Check content type before attempting JSON parse
+                content_type = response.headers.get("Content-Type", "")
+                if "application/json" not in content_type:
+                    body_preview = (await response.text())[:200]
+                    raise Exception(
+                        f"Expected JSON response but got '{content_type}' from {response.url}. "
+                        f"Response preview: {body_preview}"
+                    )
+
+                data = await response.json()
+                return data
 
         except Exception as e:
             raise Exception(f"Error talking to Navidrome API: {e}")
