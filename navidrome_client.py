@@ -115,7 +115,7 @@ class NavidromeClient:
             # Proactively refresh token if expired or about to expire
             await self._ensure_authenticated()
 
-            url = f"{self.base_url}/{endpoint}"
+            url = f"{self.base_url}/{endpoint.lstrip('/')}"
             params = {**self._get_subsonic_params(), **kwargs}
             headers = self._get_auth_headers()
 
