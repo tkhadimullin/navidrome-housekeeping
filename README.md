@@ -36,6 +36,7 @@ services:
   navidrome:
     image: deluan/navidrome:latest
     container_name: navidrome
+    user: "1000:1000" # should match the owner of your music library
     restart: unless-stopped
     environment:
       # ... other settings
@@ -46,6 +47,7 @@ services:
   navidrome-housekeeping:
     image: wiseowls/navidrome-housekeeping:latest
     container_name: navidrome-housekeeping
+    user: "1000:1000" # should match the owner of your music library (same as navidrome)
     restart: unless-stopped
     environment:
       NAVIDROME_URL: http://navidrome:4533
@@ -69,5 +71,5 @@ This will start the container in the background, polling your Navidrome library 
 
 ## Notes
 
-* Make sure the UID of the container user matches your host user if you want proper file permissions (our Dockerfiles create a user with UID 1000 by default).
+* Make sure the UID of the container user matches your Navidrome user if you want proper file permissions (our Dockerfile creates a user with UID 100 by default).
 * Logs are printed to stdout and can be viewed with `docker logs -f navidrome-housekeeping`.
